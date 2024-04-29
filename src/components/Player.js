@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { Stage, Layer, Sprite } from "react-konva";
+import { Sprite } from "react-konva";
 import spritesheet from "../assets/character/p1_spritesheet.png";
 
 const Player = () => {
 	const [image, setImage] = useState(null);
 	const [animation, setAnimation] = useState("idle");
-	const [position, setPosition] = useState({ x: 50, y: 50 });
+	// Start the player right on top of the starting tile
+	const [position, setPosition] = useState({
+		x: 50,
+		y: window.innerHeight - 70 - 97,
+	}); // 97 is player height
+	const [yVelocity, setYVelocity] = useState(0);
+	const gravity = 0.3; // Gravity constant
 
 	useEffect(() => {
 		const img = new Image();
@@ -27,28 +33,28 @@ const Player = () => {
 
 	useEffect(() => {
 		const handleKeyDown = (e) => {
-			switch (e.key) {
-				case "ArrowLeft":
-					setAnimation("walk");
-					setPosition((pos) => ({ ...pos, x: pos.x - 5 }));
-					break;
-				case "ArrowRight":
-					setAnimation("walk");
-					setPosition((pos) => ({ ...pos, x: pos.x + 5 }));
-					break;
-				case "ArrowUp":
-					setAnimation("jump");
-					break;
-				case "ArrowDown":
-					setAnimation("duck");
-					break;
-				default:
-					setAnimation("idle");
+			if (e.key === "ArrowLeft") {
+				setAnimation("walk");
+				setPosition((pos) => ({ ...pos, x: pos.x - 12 }));
+			} else if (e.key === "ArrowRight") {
+				setAnimation("walk");
+				setPosition((pos) => ({ ...pos, x: pos.x + 12 }));
+			} else if (
+				e.key === "ArrowUp" &&
+				position.y === window.innerHeight - 70 - 97
+			) {
+				// Ensure jumping only if on the ground
+				setYVelocity(-45);
+				setAnimation("jump");
+			} else if (e.key === "ArrowDown") {
+				setAnimation("duck");
 			}
 		};
 
-		const handleKeyUp = () => {
-			setAnimation("idle");
+		const handleKeyUp = (e) => {
+			if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) {
+				setAnimation("idle");
+			}
 		};
 
 		window.addEventListener("keydown", handleKeyDown);
@@ -58,22 +64,42 @@ const Player = () => {
 			window.removeEventListener("keydown", handleKeyDown);
 			window.removeEventListener("keyup", handleKeyUp);
 		};
-	}, []);
+	}, [yVelocity, position]); // Correctly specify dependencies
+
+	useEffect(() => {
+		const timer = setInterval(() => {
+			if (yVelocity !== 0 || position.y !== window.innerHeight - 70 - 97) {
+				const newYVelocity = yVelocity + gravity;
+				setPosition((pos) => {
+					const newY = pos.y + newYVelocity;
+					if (newY >= window.innerHeight - 70 - 97) {
+						// Prevent falling through the platform
+						return { ...pos, y: window.innerHeight - 70 - 97 };
+					} else {
+						return { ...pos, y: newY };
+					}
+				});
+				if (position.y === window.innerHeight - 70 - 97) {
+					setYVelocity(0); // Stop moving when back on ground
+				} else {
+					setYVelocity(newYVelocity);
+				}
+			}
+		}, 20);
+
+		return () => clearInterval(timer);
+	}, [yVelocity, position.y]); // Ensure dependencies are correct
 
 	return (
-		<Stage width={window.innerWidth} height={window.innerHeight}>
-			<Layer>
-				<Sprite
-					x={position.x}
-					y={position.y}
-					image={image}
-					animation={animation}
-					animations={animations}
-					frameRate={7}
-					frameIndex={0}
-				/>
-			</Layer>
-		</Stage>
+		<Sprite
+			x={position.x}
+			y={position.y}
+			image={image}
+			animation={animation}
+			animations={animations}
+			frameRate={10}
+			frameIndex={0}
+		/>
 	);
 };
 
