@@ -5,13 +5,12 @@ import spritesheet from "../assets/character/p1_spritesheet.png";
 const Player = () => {
 	const [image, setImage] = useState(null);
 	const [animation, setAnimation] = useState("idle");
-	// Start the player right on top of the starting tile
 	const [position, setPosition] = useState({
-		x: 50,
-		y: window.innerHeight - 70 - 97,
-	}); // 97 is player height
+		x: 50, // Initial horizontal position
+		y: window.innerHeight - 70 - 97, // Initial vertical position considering tile and player height
+	});
 	const [yVelocity, setYVelocity] = useState(0);
-	const gravity = 0.3; // Gravity constant
+	const gravity = 0.3; // Gravity effect
 
 	useEffect(() => {
 		const img = new Image();
@@ -34,17 +33,22 @@ const Player = () => {
 	useEffect(() => {
 		const handleKeyDown = (e) => {
 			if (e.key === "ArrowLeft") {
-				setAnimation("walk");
 				setPosition((pos) => ({ ...pos, x: pos.x - 12 }));
+				if (position.y === window.innerHeight - 70 - 97) {
+					// Only change to walk if on the ground
+					setAnimation("walk");
+				}
 			} else if (e.key === "ArrowRight") {
-				setAnimation("walk");
 				setPosition((pos) => ({ ...pos, x: pos.x + 12 }));
+				if (position.y === window.innerHeight - 70 - 97) {
+					// Only change to walk if on the ground
+					setAnimation("walk");
+				}
 			} else if (
 				e.key === "ArrowUp" &&
 				position.y === window.innerHeight - 70 - 97
 			) {
-				// Ensure jumping only if on the ground
-				setYVelocity(-45);
+				setYVelocity(-175); // Provide initial upward velocity
 				setAnimation("jump");
 			} else if (e.key === "ArrowDown") {
 				setAnimation("duck");
@@ -52,7 +56,10 @@ const Player = () => {
 		};
 
 		const handleKeyUp = (e) => {
-			if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) {
+			if (
+				["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key) &&
+				position.y === window.innerHeight - 70 - 97
+			) {
 				setAnimation("idle");
 			}
 		};
@@ -64,7 +71,7 @@ const Player = () => {
 			window.removeEventListener("keydown", handleKeyDown);
 			window.removeEventListener("keyup", handleKeyUp);
 		};
-	}, [yVelocity, position]); // Correctly specify dependencies
+	}, [position.y]); // Listen for changes in vertical position
 
 	useEffect(() => {
 		const timer = setInterval(() => {
@@ -73,14 +80,13 @@ const Player = () => {
 				setPosition((pos) => {
 					const newY = pos.y + newYVelocity;
 					if (newY >= window.innerHeight - 70 - 97) {
-						// Prevent falling through the platform
-						return { ...pos, y: window.innerHeight - 70 - 97 };
+						return { ...pos, y: window.innerHeight - 70 - 97 }; // Prevent falling through platform
 					} else {
 						return { ...pos, y: newY };
 					}
 				});
 				if (position.y === window.innerHeight - 70 - 97) {
-					setYVelocity(0); // Stop moving when back on ground
+					setYVelocity(0); // Reset velocity on ground
 				} else {
 					setYVelocity(newYVelocity);
 				}
@@ -88,7 +94,7 @@ const Player = () => {
 		}, 20);
 
 		return () => clearInterval(timer);
-	}, [yVelocity, position.y]); // Ensure dependencies are correct
+	}, [yVelocity, position.y]); // Ensure correct dependencies
 
 	return (
 		<Sprite
