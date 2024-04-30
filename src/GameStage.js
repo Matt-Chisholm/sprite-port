@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Stage, Layer, Text, Rect } from "react-konva";
+import Konva from "konva";
 import Background from "./components/Background";
 import Player from "./components/Player";
 import TileManager from "./components/TileManager";
-import useImageLoader from "./hooks/useImageLoader"; // Assuming the hook is saved here
+import useImageLoader from "./hooks/useImageLoader";
+import ClipLoader from "react-spinners/ClipLoader";
 
 const GameStage = () => {
 	const [gameOver, setGameOver] = useState(false);
@@ -11,6 +13,7 @@ const GameStage = () => {
 		x: 50,
 		y: window.innerHeight - 70 - 97, // Adjust the calculation based on your game's design
 	});
+	const popupRef = useRef(null);
 
 	const resetGame = () => {
 		setGameOver(false);
@@ -24,6 +27,20 @@ const GameStage = () => {
 	const onGameOver = () => {
 		setGameOver(true);
 	};
+
+	useEffect(() => {
+		if (gameOver && popupRef.current) {
+			const tween = new Konva.Tween({
+				node: popupRef.current,
+				duration: 1,
+				scaleX: 1,
+				scaleY: 1,
+				opacity: 1,
+				easing: Konva.Easings.EaseInOut,
+			});
+			tween.play();
+		}
+	}, [gameOver]);
 
 	const tileWidth = 70;
 	const tileHeight = 70;
@@ -52,7 +69,7 @@ const GameStage = () => {
 					setPosition={setPlayerPosition}
 				/>
 				{isLoading ? (
-					<Text text='Loading image...' fontSize={24} x={100} y={100} />
+					<ClipLoader color='#f00' loading={isLoading} size={35} />
 				) : (
 					<TileManager
 						image={image}
@@ -64,35 +81,40 @@ const GameStage = () => {
 				{gameOver && (
 					<React.Fragment>
 						<Rect
-							x={100}
-							y={100}
+							ref={popupRef}
+							x={window.innerWidth / 2 - 150}
+							y={window.innerHeight / 2 - 90}
 							width={300}
 							height={180}
 							fill='white'
 							stroke='black'
 							strokeWidth={4}
 							cornerRadius={10}
+							opacity={0}
+							scaleX={0.5}
+							scaleY={0.5}
 						/>
 						<Text
 							text='Oops! You died!'
 							fontSize={24}
-							x={150}
-							y={150}
+							x={window.innerWidth / 2 - 140}
+							y={window.innerHeight / 2 - 50}
 							fill='black'
 						/>
 						<Rect
-							x={150}
-							y={200}
+							x={window.innerWidth / 2 - 100}
+							y={window.innerHeight / 2 + 30}
 							width={200}
 							height={40}
+							cornerRadius={10}
 							fill='red'
 							onClick={resetGame}
 						/>
 						<Text
 							text='Restart'
 							fontSize={20}
-							x={190}
-							y={210}
+							x={window.innerWidth / 2 - 90}
+							y={window.innerHeight / 2 + 40}
 							fill='white'
 							onClick={resetGame}
 						/>
