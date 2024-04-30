@@ -5,7 +5,8 @@ const Player = ({ platforms, onGameOver, position, setPosition }) => {
 	const [image, setImage] = useState(null);
 	const [animation, setAnimation] = useState("idle");
 	const [yVelocity, setYVelocity] = useState(0);
-	const [scaleX, setScaleX] = useState(1); // State for sprite flipping
+	const [scaleX, setScaleX] = useState(1);
+	const [frameIndex, setFrameIndex] = useState(0);
 
 	const gravity = 0.3; // Gravity effect
 	const playerWidth = 72;
@@ -19,15 +20,68 @@ const Player = ({ platforms, onGameOver, position, setPosition }) => {
 
 	const animations = {
 		walk: [
-			0, 0, 72, 97, 73, 0, 72, 97, 146, 0, 72, 97, 219, 0, 72, 97, 292, 0, 72,
-			97, 365, 0, 72, 97, 219, 98, 72, 97, 292, 98, 72, 97, 146, 98, 72, 97, 73,
-			98, 72, 97, 0, 98, 72, 97,
+			0,
+			0,
+			72,
+			97, // p1_walk01
+			73,
+			0,
+			72,
+			97, // p1_walk02
+			146,
+			0,
+			72,
+			97, // p1_walk03
+			219,
+			0,
+			72,
+			97, // p1_walk07
+			292,
+			0,
+			72,
+			97, // p1_walk08
+			365,
+			0,
+			72,
+			97, // p1_walk10
+			0,
+			98,
+			72,
+			97, // p1_walk04
+			73,
+			98,
+			72,
+			97, // p1_walk05
+			146,
+			98,
+			72,
+			97, // p1_walk06
+			219,
+			98,
+			72,
+			97, // p1_walk09
+			292,
+			98,
+			72,
+			97, // p1_walk11
 		],
 		jump: [438, 93, 67, 94],
 		idle: [67, 196, 66, 92],
 		hurt: [438, 0, 69, 92],
 		duck: [365, 98, 69, 71],
 	};
+
+	useEffect(() => {
+		let interval;
+		if (animation === "walk") {
+			interval = setInterval(() => {
+				setFrameIndex(
+					(prevIndex) => (prevIndex + 1) % (animations.walk.length / 4)
+				); // There are 4 values per frame
+			}, 100); // Update frame every 100ms
+		}
+		return () => clearInterval(interval);
+	}, [animation, animations.walk.length]);
 
 	const isOnGround = useCallback(() => {
 		const playerBottom = position.y + playerHeight;
@@ -42,28 +96,28 @@ const Player = ({ platforms, onGameOver, position, setPosition }) => {
 
 	const handleKeyDown = useCallback(
 		(e) => {
-			if (e.key === "ArrowLeft") {
-				// Reduce x position change on flip to minimize movement.
+			if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+				const moveLeft = e.key === "ArrowLeft";
 				setPosition((prev) => ({
 					...prev,
-					x: prev.x - (scaleX > 0 ? 6 : 20),
+					x: prev.x + (moveLeft ? -12 : 12), // Simplify movement logic
 				}));
-				setScaleX(-1); // Flip sprite to face left
-				setAnimation("walk");
-			} else if (e.key === "ArrowRight") {
-				// Reduce x position change on flip to minimize movement.
-				setPosition((prev) => ({
-					...prev,
-					x: prev.x + (scaleX < 0 ? 6 : 20),
-				}));
-				setScaleX(1); // Normal sprite orientation for facing right
-				setAnimation("walk");
+				setScaleX(moveLeft ? -1 : 1); // Flip based on direction
+
+				if (isOnGround()) {
+					setAnimation("walk");
+				} else {
+					// Maintain the jump animation if not on ground
+					if (animation !== "jump") {
+						setAnimation("jump");
+					}
+				}
 			} else if ((e.key === "ArrowUp" || e.key === " ") && isOnGround()) {
-				setYVelocity(-12);
-				setAnimation("jump");
+				setYVelocity(-12); // Apply jump velocity
+				setAnimation("jump"); // Switch to jump animation
 			}
 		},
-		[isOnGround, scaleX, setPosition] // Ensure dependencies are correctly specified
+		[isOnGround, setPosition, setYVelocity, animation] // Include all used dependencies
 	);
 
 	useEffect(() => {
@@ -135,9 +189,9 @@ const Player = ({ platforms, onGameOver, position, setPosition }) => {
 			image={image}
 			animation={animation}
 			animations={animations}
-			scaleX={scaleX}
 			frameRate={10}
-			frameIndex={0}
+			frameIndex={frameIndex}
+			scaleX={scaleX}
 		/>
 	);
 };
