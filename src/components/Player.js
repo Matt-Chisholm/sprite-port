@@ -1,21 +1,20 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Sprite } from "react-konva";
-import spritesheet from "../assets/character/p1_spritesheet.png";
 
-const Player = () => {
+const Player = ({ platforms, onGameOver, position, setPosition }) => {
 	const [image, setImage] = useState(null);
 	const [animation, setAnimation] = useState("idle");
-	const [position, setPosition] = useState({
-		x: 50, // Initial horizontal position
-		y: window.innerHeight - 70 - 97, // Initial vertical position considering tile and player height
-	});
 	const [yVelocity, setYVelocity] = useState(0);
+	const [scaleX, setScaleX] = useState(1); // State for sprite flipping
+
 	const gravity = 0.3; // Gravity effect
+	const playerWidth = 72;
+	const playerHeight = 97;
 
 	useEffect(() => {
 		const img = new Image();
 		img.onload = () => setImage(img);
-		img.src = spritesheet;
+		img.src = "../assets/character/p1_spritesheet.png";
 	}, []);
 
 	const animations = {
@@ -30,71 +29,104 @@ const Player = () => {
 		duck: [365, 98, 69, 71],
 	};
 
-	useEffect(() => {
-		const handleKeyDown = (e) => {
+	const isOnGround = useCallback(() => {
+		const playerBottom = position.y + playerHeight;
+		return platforms.some(
+			(platform) =>
+				position.x + playerWidth > platform.x &&
+				position.x < platform.x + platform.width &&
+				playerBottom >= platform.y &&
+				playerBottom < platform.y + platform.height
+		);
+	}, [position, playerWidth, playerHeight, platforms]);
+
+	const handleKeyDown = useCallback(
+		(e) => {
 			if (e.key === "ArrowLeft") {
-				setPosition((pos) => ({ ...pos, x: pos.x - 12 }));
-				if (position.y === window.innerHeight - 70 - 97) {
-					// Only change to walk if on the ground
-					setAnimation("walk");
-				}
+				// Reduce x position change on flip to minimize movement.
+				setPosition((prev) => ({
+					...prev,
+					x: prev.x - (scaleX > 0 ? 6 : 20),
+				}));
+				setScaleX(-1); // Flip sprite to face left
+				setAnimation("walk");
 			} else if (e.key === "ArrowRight") {
-				setPosition((pos) => ({ ...pos, x: pos.x + 12 }));
-				if (position.y === window.innerHeight - 70 - 97) {
-					// Only change to walk if on the ground
-					setAnimation("walk");
-				}
-			} else if (
-				e.key === "ArrowUp" &&
-				position.y === window.innerHeight - 70 - 97
-			) {
-				setYVelocity(-175); // Provide initial upward velocity
+				// Reduce x position change on flip to minimize movement.
+				setPosition((prev) => ({
+					...prev,
+					x: prev.x + (scaleX < 0 ? 6 : 20),
+				}));
+				setScaleX(1); // Normal sprite orientation for facing right
+				setAnimation("walk");
+			} else if ((e.key === "ArrowUp" || e.key === " ") && isOnGround()) {
+				setYVelocity(-12);
 				setAnimation("jump");
-			} else if (e.key === "ArrowDown") {
-				setAnimation("duck");
 			}
-		};
+		},
+		[isOnGround, scaleX, setPosition] // Ensure dependencies are correctly specified
+	);
 
-		const handleKeyUp = (e) => {
-			if (
-				["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key) &&
-				position.y === window.innerHeight - 70 - 97
-			) {
-				setAnimation("idle");
-			}
-		};
-
+	useEffect(() => {
 		window.addEventListener("keydown", handleKeyDown);
-		window.addEventListener("keyup", handleKeyUp);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [handleKeyDown]);
 
-		return () => {
-			window.removeEventListener("keydown", handleKeyDown);
-			window.removeEventListener("keyup", handleKeyUp);
+	useEffect(() => {
+		const handleKeyUp = () => {
+			setAnimation("idle");
 		};
-	}, [position.y]); // Listen for changes in vertical position
+		window.addEventListener("keyup", handleKeyUp);
+		return () => window.removeEventListener("keyup", handleKeyUp);
+	}, []);
 
 	useEffect(() => {
 		const timer = setInterval(() => {
-			if (yVelocity !== 0 || position.y !== window.innerHeight - 70 - 97) {
-				const newYVelocity = yVelocity + gravity;
-				setPosition((pos) => {
-					const newY = pos.y + newYVelocity;
-					if (newY >= window.innerHeight - 70 - 97) {
-						return { ...pos, y: window.innerHeight - 70 - 97 }; // Prevent falling through platform
-					} else {
-						return { ...pos, y: newY };
-					}
-				});
-				if (position.y === window.innerHeight - 70 - 97) {
-					setYVelocity(0); // Reset velocity on ground
-				} else {
+			if (position.y > window.innerHeight) {
+				// Trigger game over when player falls below the bottom of the screen
+				clearInterval(timer);
+				onGameOver();
+			} else {
+				if (!isOnGround() || yVelocity < 0) {
+					// If the player is not on the ground or moving upwards, apply gravity
+					const newYVelocity = yVelocity + gravity;
+					const nextY = position.y + newYVelocity;
+
+					setPosition((prev) => ({ ...prev, y: nextY }));
 					setYVelocity(newYVelocity);
+				} else if (isOnGround()) {
+					// If the player is on the ground and moving downwards, stop the downward movement
+					const groundPlatform = platforms.find(
+						(platform) =>
+							position.x + playerWidth > platform.x &&
+							position.x < platform.x + platform.width &&
+							position.y + playerHeight >= platform.y &&
+							position.y + playerHeight <= platform.y + platform.height
+					);
+
+					if (groundPlatform) {
+						setPosition((prev) => ({
+							...prev,
+							y: groundPlatform.y - playerHeight,
+						}));
+						setYVelocity(0); // Reset vertical velocity
+					}
 				}
 			}
 		}, 20);
 
 		return () => clearInterval(timer);
-	}, [yVelocity, position.y]); // Ensure correct dependencies
+	}, [
+		yVelocity,
+		position.y,
+		setPosition,
+		position.x,
+		isOnGround,
+		gravity,
+		platforms,
+		playerWidth,
+		playerHeight,
+		onGameOver, // add onGameOver to the dependency array if it's not a stable reference
+	]);
 
 	return (
 		<Sprite
@@ -103,6 +135,7 @@ const Player = () => {
 			image={image}
 			animation={animation}
 			animations={animations}
+			scaleX={scaleX}
 			frameRate={10}
 			frameIndex={0}
 		/>
