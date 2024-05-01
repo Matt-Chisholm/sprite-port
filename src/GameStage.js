@@ -6,9 +6,11 @@ import Player from "./components/Player";
 import TileManager from "./components/TileManager";
 import useImageLoader from "./hooks/useImageLoader";
 import ClipLoader from "react-spinners/ClipLoader";
+import ControlPopup from "./components/popups/ControlPopup";
 
 const GameStage = () => {
 	const [gameOver, setGameOver] = useState(false);
+	const [showControls, setShowControls] = useState(false);
 	const [playerPosition, setPlayerPosition] = useState({
 		x: 50,
 		y: window.innerHeight - 70 - 97, // Adjust the calculation based on your game's design
@@ -26,6 +28,18 @@ const GameStage = () => {
 
 	const onGameOver = () => {
 		setGameOver(true);
+	};
+
+	useEffect(() => {
+		const hasVisited = localStorage.getItem("hasVisited");
+		if (!hasVisited) {
+			setShowControls(true);
+			localStorage.setItem("hasVisited", "true");
+		}
+	}, []);
+
+	const handleCloseControls = () => {
+		setShowControls(false);
 	};
 
 	useEffect(() => {
@@ -62,6 +76,7 @@ const GameStage = () => {
 		<Stage width={window.innerWidth} height={window.innerHeight}>
 			<Layer>
 				<Background />
+				<ControlPopup visible={showControls} onClose={handleCloseControls} />
 				<Player
 					platforms={platforms}
 					onGameOver={onGameOver}
