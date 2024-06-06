@@ -1,34 +1,7 @@
-import React, { useState, useEffect } from "react";
-import { Rect, Text, Group, Image as KonvaImage } from "react-konva";
+import React from "react";
+import { Rect, Text, Group } from "react-konva";
 
-const ControlPopup = ({ visible, onClose }) => {
-  const [arrowKeysImg, setArrowKeysImg] = useState(null);
-
-  useEffect(() => {
-    const loadImage = (src, setter) => {
-      const img = new Image();
-      img.src = src;
-      img.onload = () => {
-        setter(img);
-      };
-    };
-
-    loadImage("assets/images/arrowkeys.png", setArrowKeysImg);
-  }, []);
-
-  const getImageDimensions = (img, maxWidth, maxHeight) => {
-    const ratio = img.width / img.height;
-    let width = maxWidth;
-    let height = maxWidth / ratio;
-
-    if (height > maxHeight) {
-      height = maxHeight;
-      width = maxHeight * ratio;
-    }
-
-    return { width, height };
-  };
-
+const WelcomePopup = ({ visible, onClose }) => {
   if (!visible) return null;
 
   const popupWidth = 500;
@@ -51,7 +24,7 @@ const ControlPopup = ({ visible, onClose }) => {
         cornerRadius={10}
       />
       <Text
-        text="Controls"
+        text="Welcome to My Portfolio!"
         x={padding}
         y={padding}
         fontSize={24}
@@ -61,34 +34,15 @@ const ControlPopup = ({ visible, onClose }) => {
         align="center"
       />
       <Text
-        text="Use the arrow keys to move left and right."
+        text="Navigate through this interactive game to explore my work and skills. Each platform contains valuable insights about my professional journey. Enjoy your adventure!"
         x={padding}
         y={padding + 40}
         fontSize={18}
+        lineHeight={1.5}
         fill="#555"
         width={popupWidth - padding * 2}
         align="center"
       />
-      <Text
-        text="Interact with objects to learn more about me."
-        x={padding}
-        y={padding + 70}
-        fontSize={18}
-        fill="#555"
-        width={popupWidth - padding * 2}
-        align="center"
-      />
-      {arrowKeysImg && (
-        <KonvaImage
-          image={arrowKeysImg}
-          {...getImageDimensions(arrowKeysImg, 175, 87)}
-          x={
-            popupWidth / 2 - getImageDimensions(arrowKeysImg, 175, 87).width / 2
-          }
-          y={padding + 90}
-          key="arrowKeysImg"
-        />
-      )}
       <Rect
         x={popupWidth / 2 - closeButtonWidth / 2}
         y={popupHeight - padding - closeButtonHeight}
@@ -113,4 +67,4 @@ const ControlPopup = ({ visible, onClose }) => {
   );
 };
 
-export default ControlPopup;
+export default WelcomePopup;
